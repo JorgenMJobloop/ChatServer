@@ -10,7 +10,7 @@ class Program
         string userInput = Console.ReadLine() ?? "n";
         if (userInput.ToLower() == "y")
         {
-            await RunServer();
+            RunServer();
         }
         else
         {
@@ -20,10 +20,10 @@ class Program
 
     }
 
-    static async Task RunServer()
+    static void RunServer()
     {
         ChatServer chatServer = new ChatServer();
-        await chatServer.StartServer(4444);
+        chatServer.StartServer(4444);
     }
 
 }

@@ -4,6 +4,11 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Security;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
+using System.Text.Json;
 
 /// <summary>
 /// A TCP Chatserver CLI (MVP)
@@ -18,15 +23,17 @@ public class ChatServer
     private List<TcpClient> tcpClients = new List<TcpClient>();
 
     //Referanse til en ny klient som blir passet til clientHandler on threadstart. 
-    private TcpClient _newClient {get;set;}
+    private TcpClient _newClient { get; set; }
+
+    private string? Password { get; set; }
 
 
-    public List<Thread?> ClientThreads {get;set;} = [];
+    public List<Thread?> ClientThreads { get; set; } = [];
     /// <summary>
     /// Our main listening method
     /// </summary>
     /// <param name="port">the port our server will listen on</param>
-    public async Task StartServer(int port)
+    public void StartServer(int port)
     {
         tcpListener = new TcpListener(IPAddress.Any, port);
         // start up the connection
@@ -98,8 +105,32 @@ public class ChatServer
             {
                 // client no longer active!
             }
-            
+
         }
 
+    }
+
+    private string GenerateNewSHA256Hash(string rawData)
+    {
+        using (SHA256 sha256 = SHA256.Create())
+        {
+            byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (byte bytes in hash)
+            {
+                stringBuilder.Append(bytes.ToString("x2"));
+            }
+            return stringBuilder.ToString();
+        }
+    }
+    private void GenerateUserToken()
+    {
+        if (!File.Exists("user_token.json"))
+        {
+            File.Create("user_token.json");
+        }
+        var token = JsonObject.Parse(_newClient.ToString());
+        string? serializeObject = JsonSerializer.Serialize(token);
+        File.AppendText(serializeObject);
     }
 }
