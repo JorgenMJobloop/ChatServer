@@ -17,6 +17,9 @@ public class ChatServer
     /// </summary>
     private List<TcpClient> tcpClients = new List<TcpClient>();
 
+    //Referanse til en ny klient som blir passet til clientHandler on threadstart. 
+    private TcpClient _newClient {get;set;}
+
     /// <summary>
     /// Our main listening method
     /// </summary>
@@ -32,17 +35,21 @@ public class ChatServer
         {
             // client listener
             var client = tcpListener.AcceptTcpClient();
+            _newClient = client;
             tcpClients.Add(client);
             Console.WriteLine("A new client has connected to the server!");
 
             // todo: create a client handler
             var clientThread = new Thread(ClientHandler);
+            //Starter client thread
+            clientThread.Start();
         }
     }
 
-    private void ClientHandler(object clientObject)
+    private void ClientHandler()
     {
-        var client = (TcpClient)clientObject;
+        //Lager en egen referanse til _newClient ved threadstart, herfra er den separat fra mainthread.
+        var client = _newClient;
         var stream = client.GetStream();
         var reader = new StreamReader(stream);
 
@@ -57,7 +64,8 @@ public class ChatServer
                 }
                 Console.WriteLine($"Client: {message}");
                 // todo: create a message method
-                WriteMessage(message);
+                //Leverer handle til threaden's client som identifier til writeMessage.
+                WriteMessage(message, client.Client.Handle);
             }
         }
         catch (Exception)
@@ -72,9 +80,10 @@ public class ChatServer
         }
     }
 
-    private void WriteMessage(string message)
+    private void WriteMessage(string message, nint handle)
     {
-        foreach (var client in tcpClients)
+        //Luker vekk client med handler lik den som spawned WriteMessage.
+        foreach (var client in tcpClients.Where(c=>c.Client.Handle != handle))
         {
             try
             {
