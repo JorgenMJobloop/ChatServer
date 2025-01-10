@@ -20,16 +20,19 @@ public class ChatServer
     //Referanse til en ny klient som blir passet til clientHandler on threadstart. 
     private TcpClient _newClient {get;set;}
 
+
+    public List<Thread?> ClientThreads {get;set;} = [];
     /// <summary>
     /// Our main listening method
     /// </summary>
     /// <param name="port">the port our server will listen on</param>
-    public void StartServer(int port)
+    public async Task StartServer(int port)
     {
         tcpListener = new TcpListener(IPAddress.Any, port);
         // start up the connection
         tcpListener.Start();
         Console.WriteLine($"Server started on port {port}...");
+
 
         while (true)
         {
@@ -40,24 +43,21 @@ public class ChatServer
             Console.WriteLine("A new client has connected to the server!");
 
             // todo: create a client handler
-            var clientThread = new Thread(ClientHandler);
-            //Starter client thread
-            clientThread.Start();
+            var task = ClientHandler();
         }
     }
 
-    private void ClientHandler()
+    private async Task ClientHandler()
     {
         //Lager en egen referanse til _newClient ved threadstart, herfra er den separat fra mainthread.
         var client = _newClient;
         var stream = client.GetStream();
         var reader = new StreamReader(stream);
-
         try
         {
             while (true)
             {
-                var message = reader.ReadLine();
+                var message = await reader.ReadLineAsync();
                 if (message == null)
                 {
                     break;
@@ -78,23 +78,28 @@ public class ChatServer
             tcpClients.Remove(client);
             client.Close();
         }
+
     }
 
     private void WriteMessage(string message, nint handle)
     {
         //Luker vekk client med handler lik den som spawned WriteMessage.
-        foreach (var client in tcpClients.Where(c=>c.Client.Handle != handle))
+        foreach (var client in tcpClients)
         {
             try
             {
                 // new writer, use autoflush
                 var writer = new StreamWriter(client.GetStream()) { AutoFlush = true };
-                writer.WriteLine(message);
+                Console.WriteLine(handle.GetHashCode());
+                Console.WriteLine("Connected Clients: " + tcpClients.Count);
+                writer.WriteLine(handle + ": " + message);
             }
             catch
             {
                 // client no longer active!
             }
+            
         }
+
     }
 }
