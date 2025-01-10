@@ -2,7 +2,7 @@
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         Console.WriteLine("CLI Chat App v.1");
         Console.WriteLine("Run server Y/n?");
@@ -10,7 +10,7 @@ class Program
         string userInput = Console.ReadLine() ?? "n";
         if (userInput.ToLower() == "y")
         {
-            RunServer();
+            await RunServer();
         }
         else
         {
@@ -20,10 +20,10 @@ class Program
 
     }
 
-    static void RunServer()
+    static async Task RunServer()
     {
         ChatServer chatServer = new ChatServer();
-        chatServer.StartServer(4444);
+        await chatServer.StartServer(4444);
     }
 
 }
