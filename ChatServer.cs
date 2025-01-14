@@ -9,6 +9,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.Json;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 /// <summary>
 /// A TCP Chatserver CLI (MVP)
@@ -20,117 +22,92 @@ public class ChatServer
     /// <summary>
     /// A list of connected clients
     /// </summary>
-    private List<TcpClient> tcpClients = new List<TcpClient>();
-
-    //Referanse til en ny klient som blir passet til clientHandler on threadstart. 
-    private TcpClient _newClient { get; set; }
-
+    private readonly List<TcpClient> clients = new List<TcpClient>();
+    private TcpClient? newClient { get; set; }
+    /// <summary>
+    /// Store a hashed password in-memory when server is running
+    /// </summary>
     private string? Password { get; set; }
+    //public List<Thread?> ClientThreads { get; set; } = [];
 
-
-    public List<Thread?> ClientThreads { get; set; } = [];
     /// <summary>
     /// Our main listening method
     /// </summary>
     /// <param name="port">the port our server will listen on</param>
-    public void StartServer(int port)
+    public async Task StartServerAsync(int port)
     {
+        bool isRunning = true;
         tcpListener = new TcpListener(IPAddress.Any, port);
         // start up the connection
         tcpListener.Start();
         Console.WriteLine($"Server started on port {port}...");
 
-
-        while (true)
+        while (isRunning)
         {
             // client listener
-            var client = tcpListener.AcceptTcpClient();
-            _newClient = client;
-            tcpClients.Add(client);
+            var client = await tcpListener.AcceptTcpClientAsync();
+            // lock threads
+            lock (clients) clients.Add(client);
+            _ = Task.Run(() => HandleClientAsync(client));
             Console.WriteLine("A new client has connected to the server!");
-
-            // todo: create a client handler
-            var task = ClientHandler();
+            if (client.Connected == false)
+            {
+                isRunning = false;
+                break;
+            }
         }
     }
 
-    private async Task ClientHandler()
+    private async Task HandleClientAsync(TcpClient client)
     {
-        //Lager en egen referanse til _newClient ved threadstart, herfra er den separat fra mainthread.
-        var client = _newClient;
-        var stream = client.GetStream();
-        var reader = new StreamReader(stream);
+        using var stream = client.GetStream();
+        using var streamReader = new StreamReader(stream);
+        using var streamWriter = new StreamWriter(stream) { AutoFlush = true };
+
         try
         {
             while (true)
             {
-                var message = await reader.ReadLineAsync();
+                string? message = await streamReader.ReadLineAsync();
                 if (message == null)
                 {
                     break;
                 }
-                Console.WriteLine($"Client: {message}");
-                // todo: create a message method
-                //Leverer handle til threaden's client som identifier til writeMessage.
-                WriteMessage(message, client.Client.Handle);
+                Console.WriteLine($"");
             }
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            Console.WriteLine("A client has disconnected!");
+            Console.WriteLine($"An error occured {e.Message}");
         }
         finally
         {
-            // close the connection
-            tcpClients.Remove(client);
-            client.Close();
-        }
-
-    }
-
-    private void WriteMessage(string message, nint handle)
-    {
-        //Luker vekk client med handler lik den som spawned WriteMessage.
-        foreach (var client in tcpClients)
-        {
-            try
-            {
-                // new writer, use autoflush
-                var writer = new StreamWriter(client.GetStream()) { AutoFlush = true };
-                Console.WriteLine(handle.GetHashCode());
-                Console.WriteLine("Connected Clients: " + tcpClients.Count);
-                writer.WriteLine(handle + ": " + message);
-            }
-            catch
-            {
-                // client no longer active!
-            }
-
-        }
-
-    }
-
-    private string GenerateNewSHA256Hash(string rawData)
-    {
-        using (SHA256 sha256 = SHA256.Create())
-        {
-            byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-            StringBuilder stringBuilder = new StringBuilder();
-            foreach (byte bytes in hash)
-            {
-                stringBuilder.Append(bytes.ToString("x2"));
-            }
-            return stringBuilder.ToString();
+            lock (clients) clients.Remove(client);
+            client.Close(); // client disconnected
         }
     }
-    private void GenerateUserToken()
+
+    private void WriteMessage(string message, TcpClient sender)
     {
-        if (!File.Exists("user_token.json"))
-        {
-            File.Create("user_token.json");
-        }
-        var token = JsonObject.Parse(_newClient.ToString());
-        string? serializeObject = JsonSerializer.Serialize(token);
-        File.AppendText(serializeObject);
+        lock (clients)
+            //Luker vekk client med handler lik den som spawned WriteMessage.
+            foreach (var client in clients)
+            {
+                if (client == sender)
+                {
+                    continue;
+                }
+                try
+                {
+                    // new writer, use autoflush
+                    using var writer = new StreamWriter(client.GetStream()) { AutoFlush = true };
+                    Console.WriteLine("Connected Clients: " + clients.Count); // count number of connected clients
+                    writer.WriteLine(sender.GetHashCode() + ": " + message); // print out the message stdout
+                }
+                catch
+                {
+                    // client no longer active!
+                }
+            }
     }
 }

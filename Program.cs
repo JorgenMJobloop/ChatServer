@@ -4,6 +4,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        //ChatServer chatServer = new ChatServer();
         Console.WriteLine("CLI Chat App v.1");
         Console.WriteLine("Run server Y/n?");
 
@@ -11,13 +12,12 @@ class Program
         if (userInput.ToLower() == "y")
         {
             RunServer();
+            Console.WriteLine("Server running...");
         }
         else
         {
             Console.WriteLine("Server is not running..");
         }
-        Console.WriteLine("Server running..");
-
     }
 
     static void RunServer()
@@ -25,5 +25,4 @@ class Program
         ChatServer chatServer = new ChatServer();
         chatServer.StartServer(4444);
     }
-
 }
