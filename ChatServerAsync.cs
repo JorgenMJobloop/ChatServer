@@ -13,9 +13,9 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 
 /// <summary>
-/// A TCP Chatserver CLI (MVP)
+/// An async TCP Chatserver CLI (MVP)
 /// </summary>
-public class ChatServer
+public class ChatServerAsync
 {
     // Fields
     private TcpListener? tcpListener;
@@ -29,6 +29,7 @@ public class ChatServer
     /// </summary>
     private string? Password { get; set; }
     //public List<Thread?> ClientThreads { get; set; } = [];
+
 
     /// <summary>
     /// Our main listening method

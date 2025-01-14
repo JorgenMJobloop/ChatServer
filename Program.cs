@@ -11,7 +11,7 @@ class Program
         string userInput = Console.ReadLine() ?? "n";
         if (userInput.ToLower() == "y")
         {
-            RunServer();
+            await RunServerAsync();
             Console.WriteLine("Server running...");
         }
         else
@@ -20,9 +20,22 @@ class Program
         }
     }
 
-    static void RunServer()
+    static async Task RunServerAsync()
     {
-        ChatServer chatServer = new ChatServer();
-        chatServer.StartServer(4444);
+        ChatServerAsync chatServer = new ChatServerAsync();
+        await chatServer.StartServerAsync(4444);
+    }
+
+    static void RunServerWithClientValidation()
+    {
+        ChatServerWithClientValidation chatServerWithClientValidation = new ChatServerWithClientValidation();
+        chatServerWithClientValidation.StartServer(8888); // run the server
+    }
+
+    static void RunP2P()
+    {
+        Peer peer = new Peer();
+        peer.StartListening(30303); // start a new P2P connection
+        peer.ConnectToPeer("127.0.0.1", 30303, "Hello P2P!"); // connect to peer(s)
     }
 }
