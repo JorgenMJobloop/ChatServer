@@ -43,7 +43,10 @@ public class ChatServerWithClientValidation
 
         }
     }
-
+    /// <summary>
+    /// Handle client interaction
+    /// </summary>
+    /// <param name="obj">any object, preferably a TcpClient class object</param>
     private void HandleClient(object? obj)
     {
         var client = (TcpClient)obj!;

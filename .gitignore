@@ -14,7 +14,7 @@
 *.userprefs
 
 # Currently in development: Peer-2-peer support
-Peer.cs
+
 
 # Mono auto generated files
 mono_crash.*

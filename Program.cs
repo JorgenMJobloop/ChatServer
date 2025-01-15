@@ -19,19 +19,16 @@ class Program
             Console.WriteLine("Server is not running..");
         }
     }
-
     static async Task RunServerAsync()
     {
         ChatServerAsync chatServer = new ChatServerAsync();
         await chatServer.StartServerAsync(4444);
     }
-
     static void RunServerWithClientValidation()
     {
         ChatServerWithClientValidation chatServerWithClientValidation = new ChatServerWithClientValidation();
         chatServerWithClientValidation.StartServer(8888); // run the server
     }
-
     static void RunP2P()
     {
         Peer peer = new Peer();
