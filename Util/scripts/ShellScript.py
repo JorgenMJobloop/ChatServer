@@ -20,11 +20,14 @@ def run():
        print("Installing depencies..")
        subprocess.Popen(["chmod+=x", "dotnet.sh"])
        subprocess.Popen("./dotnet.sh") # must run as root
-    subprocess.Popen("dotnet watch --quiet run")
-    print("Server checking for dependencies, please wait..")
+    else:
+        print("Server starting...")
+        time.sleep(10)
+        print("Running command: 'dotnet watch --quiet run'")
+        subprocess.Popen("dotnet watch --quiet run")
+    
     time.sleep(10)
     print("Finished checking depencies, running application..")
-    #subprocess.Popen(args[1] + "watch --quiet run", shell=True)    
 
 def main():
     pass
