@@ -12,7 +12,7 @@ class Program
         //ChatServer chatServer = new ChatServer();
         Console.WriteLine("Welcome to the Decentralized CLI Chat App v.1");
         Console.WriteLine("There are three modes to run the program in.\n");
-        Console.WriteLine("[1]: Asyncronous Decentralized Server (not encrypted, not TSL, insecure)\n[2]: Decentralized Server with client authentication (not encrypted, not TSL, less secure)\n[3]: P2P (RSA Encrypted)");
+        Console.WriteLine("[1]: Asyncronous Decentralized Server (not encrypted, not TSL, insecure)\n[2]: Decentralized Server with client authentication (not encrypted, not TSL, less secure)\n[3]: P2P (TSL Encrypted)");
 
         string userInput = Console.ReadLine() ?? "";
 

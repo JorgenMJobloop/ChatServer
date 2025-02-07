@@ -11,7 +11,7 @@ public class Peer : IDisposable
 {
     private TcpListener? listener;
 
-    // Todo: add TLS or SSL instead of RSA to encrypt the TCP transmissions
+    // Todo: add TSL or SSL instead of RSA to encrypt the TCP transmissions
     private bool isRunning = false;
     private readonly ConcurrentDictionary<TcpClient, SslStream> currentlyConnectedPeers = new ConcurrentDictionary<TcpClient, SslStream>();
     // TSL support
@@ -35,7 +35,7 @@ public class Peer : IDisposable
             try
             {
                 sslStream.AuthenticateAsServer(serverCert, true, System.Security.Authentication.SslProtocols.Tls12, false);
-                Console.WriteLine($"TLS Handshake completed with: {client.Client.RemoteEndPoint}");
+                Console.WriteLine($"TSL Handshake completed with: {client.Client.RemoteEndPoint}");
 
                 currentlyConnectedPeers.TryAdd(client, sslStream);
                 Console.WriteLine($"New peer connected: {client.Client.RemoteEndPoint}");
@@ -43,7 +43,7 @@ public class Peer : IDisposable
             }
             catch (Exception e)
             {
-                Console.WriteLine($"An error occured when attempting to iniate the TLS Handskake\n ERROR:{e.Message}");
+                Console.WriteLine($"An error occured when attempting to iniate the TSL Handskake\n ERROR:{e.Message}");
                 client.Close();
             }
         }
