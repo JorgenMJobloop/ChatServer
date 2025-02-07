@@ -16,12 +16,19 @@ public class Peer : IDisposable
     private readonly ConcurrentDictionary<TcpClient, SslStream> currentlyConnectedPeers = new ConcurrentDictionary<TcpClient, SslStream>();
     // TSL support
     private readonly X509Certificate2 serverCert;
-
+    /// <summary>
+    /// P2P class constructor
+    /// </summary>
+    /// <param name="certificatePath">path of certificate</param>
+    /// <param name="certificatePassword">password to decrypt</param>
     public Peer(string certificatePath, string certificatePassword)
     {
         serverCert = new X509Certificate2(certificatePath, certificatePassword);
     }
-
+    /// <summary>
+    /// Start a new listener
+    /// </summary>
+    /// <param name="port">port to listen on</param>
     public void StartListening(int port)
     {
         listener = new TcpListener(IPAddress.Any, port);
@@ -48,7 +55,9 @@ public class Peer : IDisposable
             }
         }
     }
-
+    /// <summary>
+    /// Kill the server and the open port(s)
+    /// </summary>
     public void StopListening()
     {
         isRunning = false;
@@ -60,7 +69,11 @@ public class Peer : IDisposable
         }
         currentlyConnectedPeers.Clear();
     }
-
+    /// <summary>
+    /// Handle client interaction and assure end-to-end encryption by utilizing SslStream
+    /// </summary>
+    /// <param name="client">connected client</param>
+    /// <param name="sslStream">encrypted stream</param>
     private void HandleClient(TcpClient client, SslStream sslStream)
     {
         Task.Run(async () =>
@@ -91,7 +104,13 @@ public class Peer : IDisposable
             }
         });
     }
-
+    // TODO:
+    // Refactor this method
+    /// <summary>
+    /// Broadcast the messages in the P2P stream over the network.
+    /// </summary>
+    /// <param name="message">message to broadcast</param>
+    /// <param name="sender">client(s) sending a(ny) message(s)</param>
     private void BroadcastMessages(string? message, TcpClient sender)
     {
         foreach (var client in currentlyConnectedPeers.Keys)
@@ -112,7 +131,14 @@ public class Peer : IDisposable
             }
         }
     }
-
+    // TODO:
+    // Refactor this method
+    /// <summary>
+    /// Connect to a new peer within the P2P network.
+    /// </summary>
+    /// <param name="address">Server address</param>
+    /// <param name="port">Port to open</param>
+    /// <param name="message">P2P Messages</param>
     public void ConnectToPeer(string address, int port, string message)
     {
         var client = new TcpClient(address, port);
