@@ -5,21 +5,21 @@ using System.Net.Sockets;
 using System.Text;
 using System.Collections.Concurrent;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 public class Peer : IDisposable
 {
     private TcpListener? listener;
-    private readonly RSA rsa;
-
 
     // Todo: add TLS or SSL instead of RSA to encrypt the TCP transmissions
-    // private SslClientAuthenticationOptions authenticationOptions = new SslClientAuthenticationOptions();
     private bool isRunning = false;
-    private readonly ConcurrentDictionary<TcpClient, string?> currentlyConnectedPeers = new ConcurrentDictionary<TcpClient, string?>();
+    private readonly ConcurrentDictionary<TcpClient, SslStream> currentlyConnectedPeers = new ConcurrentDictionary<TcpClient, SslStream>();
+    // TSL support
+    private readonly X509Certificate2 serverCert;
 
-    public Peer()
+    public Peer(string certificatePath, string certificatePassword)
     {
-        rsa = RSA.Create();
+        serverCert = new X509Certificate2(certificatePath, certificatePassword);
     }
 
     public void StartListening(int port)
@@ -31,9 +31,21 @@ public class Peer : IDisposable
         while (isRunning)
         {
             var client = listener.AcceptTcpClient();
-            currentlyConnectedPeers.TryAdd(client, client.Client.RemoteEndPoint?.ToString());
-            Console.WriteLine($"New peer connected: {client.Client.RemoteEndPoint}");
-            HandleClient(client);
+            var sslStream = new SslStream(client.GetStream(), false);
+            try
+            {
+                sslStream.AuthenticateAsServer(serverCert, true, System.Security.Authentication.SslProtocols.Tls12, false);
+                Console.WriteLine($"TLS Handshake completed with: {client.Client.RemoteEndPoint}");
+
+                currentlyConnectedPeers.TryAdd(client, sslStream);
+                Console.WriteLine($"New peer connected: {client.Client.RemoteEndPoint}");
+                HandleClient(client, sslStream);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occured when attempting to iniate the TLS Handskake\n ERROR:{e.Message}");
+                client.Close();
+            }
         }
     }
 
@@ -49,48 +61,35 @@ public class Peer : IDisposable
         currentlyConnectedPeers.Clear();
     }
 
-    private void HandleClient(TcpClient client)
+    private void HandleClient(TcpClient client, SslStream sslStream)
     {
-        var endpoint = client.Client.RemoteEndPoint?.ToString() ?? "Unknown endpoint";
-        try
+        Task.Run(async () =>
         {
-            using var stream = client.GetStream();
-            using var reader = new StreamReader(stream);
-            using var writer = new StreamWriter(stream) { AutoFlush = true };
-
-            while (isRunning)
+            try
             {
-                string? publicKey = reader.ReadLine();
-                Console.WriteLine($"Recieved public key: {publicKey} from peer!");
-                // print the public key to stdout
-                string? ownPublicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
-                writer.WriteLine(ownPublicKey);
-                // recive the message
-                string? encryptedMessage = reader.ReadLine();
-                byte[] encryptedBytes = Convert.FromBase64String(encryptedMessage);
-                // decrypt the message
-                string message = Encoding.UTF8.GetString(rsa.Decrypt(encryptedBytes, RSAEncryptionPadding.Pkcs1));
-                Console.WriteLine($"Decrypted message: {message}");
-                string? streamMessage = reader.ReadLine();
-                if (streamMessage == null)
+                using var reader = new StreamReader(sslStream);
+                using var writer = new StreamWriter(sslStream) { AutoFlush = true };
+                while (isRunning)
                 {
-                    isRunning = false;
-                    break;
+                    string? message = await reader.ReadLineAsync();
+                    if (message == null)
+                    {
+                        break;
+                    }
+                    Console.WriteLine($"Peer: {client.Client.RemoteEndPoint}\n message: {message}");
+                    BroadcastMessages(message, client);
                 }
-                Console.WriteLine($"Message from {endpoint}: {streamMessage}");
-                BroadcastMessages(message, client);
-
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"An error occured: {e.Message}");
-        }
-        finally
-        {
-            currentlyConnectedPeers.TryRemove(client, out _);
-            client.Close();
-        }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occured: {e.Message}");
+            }
+            finally
+            {
+                currentlyConnectedPeers.TryRemove(client, out _);
+                client.Close();
+            }
+        });
     }
 
     private void BroadcastMessages(string? message, TcpClient sender)
@@ -121,14 +120,7 @@ public class Peer : IDisposable
         using var reader = new StreamReader(stream);
         using var writer = new StreamWriter(stream) { AutoFlush = true };
         // send the public key
-        string? ownPublicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
-        writer.WriteLine(ownPublicKey);
         string? peerPublicKey = reader.ReadLine();
-        var peerRsa = RSA.Create();
-        peerRsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(peerPublicKey), out _);
-        // encrypt messages
-        byte[] encryptedMessage = peerRsa.Encrypt(Encoding.UTF8.GetBytes(message), RSAEncryptionPadding.Pkcs1);
-        writer.WriteLine(Convert.ToBase64String(encryptedMessage));
         Console.WriteLine("Message sent");
     }
 
@@ -136,5 +128,4 @@ public class Peer : IDisposable
     {
         StopListening();
     }
-
 }

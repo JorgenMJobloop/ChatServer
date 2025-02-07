@@ -45,7 +45,7 @@ class Program
     }
     static void RunP2P()
     {
-        using (Peer peer = new Peer())
+        using (Peer peer = new Peer("", ""))
         {
             peer.StartListening(30303); // start a new P2P connection
             peer.ConnectToPeer("127.0.0.1", 30303, "Hello P2P!"); // connect to peer(s)
