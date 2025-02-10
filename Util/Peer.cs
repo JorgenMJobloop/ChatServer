@@ -6,6 +6,7 @@ using System.Text;
 using System.Collections.Concurrent;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Diagnostics;
 
 public class Peer : IDisposable
 {
@@ -113,21 +114,21 @@ public class Peer : IDisposable
     /// <param name="sender">client(s) sending a(ny) message(s)</param>
     private void BroadcastMessages(string? message, TcpClient sender)
     {
-        foreach (var client in currentlyConnectedPeers.Keys)
+        foreach (var peer in currentlyConnectedPeers.Keys)
         {
-            if (client == sender)
+            if (peer == sender)
             {
                 continue;
             }
             try
             {
-                var stream = client.GetStream();
-                using var writer = new StreamWriter(stream) { AutoFlush = true };
+                var stream = peer.GetStream();
+                using var writer = new StreamWriter(currentlyConnectedPeers[peer]) { AutoFlush = true };
                 writer.WriteLine(message);
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to send a message to: {client.Client.RemoteEndPoint}! Error message: {e.Message}");
+                Console.WriteLine($"Failed to send a message to: {peer.Client.RemoteEndPoint}! Error message: {e.Message}");
             }
         }
     }
@@ -139,19 +140,60 @@ public class Peer : IDisposable
     /// <param name="address">Server address</param>
     /// <param name="port">Port to open</param>
     /// <param name="message">P2P Messages</param>
-    public void ConnectToPeer(string address, int port, string message)
+    public void ConnectToPeer(string address, int port, string clientCertificatePath)
     {
         var client = new TcpClient(address, port);
-        using var stream = client.GetStream();
-        using var reader = new StreamReader(stream);
-        using var writer = new StreamWriter(stream) { AutoFlush = true };
-        // send the public key
-        string? peerPublicKey = reader.ReadLine();
-        Console.WriteLine("Message sent");
-    }
+        var sslStream = new SslStream(client.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+        try
+        {
+            X509Certificate2 clientCertificate = new X509Certificate2(clientCertificatePath);
+            sslStream.AuthenticateAsClient(address, new X509CertificateCollection { clientCertificate }, System.Security.Authentication.SslProtocols.Tls12, false);
+            using var writer = new StreamWriter(sslStream) { AutoFlush = true };
+            using var reader = new StreamReader(sslStream);
 
+            writer.WriteLine("Hello, peer!");
+            Console.WriteLine($"Encrypted message sent: {sslStream}\nfrom: {address}\non port: {port}");
+
+            string? response = reader.ReadLine();
+            if (response != null)
+            {
+                Console.WriteLine($"Message recieved: {response}");
+            }
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"TSL Handshake failed: {e.Message}");
+        }
+    }
+    /// <summary>
+    /// Validate the server certificate
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="certificate"></param>
+    /// <param name="chain"></param>
+    /// <param name="sslPolicyErrors"></param>
+    /// <returns></returns>
+    private static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+    {
+        if (sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+        Console.WriteLine($"Certification error: {sslPolicyErrors}");
+        return false;
+    }
+    /// <summary>
+    /// Implementation of the IDisposable interface
+    /// </summary>
     public void Dispose()
     {
+        isRunning = false;
+        listener?.Stop();
+        foreach (var peer in currentlyConnectedPeers.Keys)
+        {
+            peer.Close();
+        }
         StopListening();
     }
 }
