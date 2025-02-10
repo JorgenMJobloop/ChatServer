@@ -19,7 +19,7 @@ def run():
     if(expected_output != get_stdout):
        print("Installing depencies..")
        subprocess.Popen(["chmod+=x", "dotnet.sh"])
-       subprocess.Popen("./dotnet.sh") # must run as root
+       subprocess.Popen(["./dotnet.sh", ">> success.txt"]) # must run as root
     else:
         print("Server starting...")
         time.sleep(10)

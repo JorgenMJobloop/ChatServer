@@ -57,7 +57,7 @@ public class Peer : IDisposable
         }
     }
     /// <summary>
-    /// Kill the server and the open port(s)
+    /// Kill the server and clase the open port(s)
     /// </summary>
     public void StopListening()
     {
@@ -105,7 +105,7 @@ public class Peer : IDisposable
             }
         });
     }
-    // TODO:
+    // TODO: [x]
     // Refactor this method
     /// <summary>
     /// Broadcast the messages in the P2P stream over the network.
@@ -132,7 +132,7 @@ public class Peer : IDisposable
             }
         }
     }
-    // TODO:
+    // TODO: [x]
     // Refactor this method
     /// <summary>
     /// Connect to a new peer within the P2P network.
@@ -142,8 +142,12 @@ public class Peer : IDisposable
     /// <param name="message">P2P Messages</param>
     public void ConnectToPeer(string address, int port, string clientCertificatePath)
     {
-        var client = new TcpClient(address, port);
-        var sslStream = new SslStream(client.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+        using var client = new TcpClient(address, port);
+        using var sslStream = new SslStream(client.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+        if (sslStream == null)
+        {
+            Debug.WriteLine("An error occured!\n Program exited with code 1...");
+        }
         try
         {
             X509Certificate2 clientCertificate = new X509Certificate2(clientCertificatePath);
@@ -159,7 +163,6 @@ public class Peer : IDisposable
             {
                 Console.WriteLine($"Message recieved: {response}");
             }
-
         }
         catch (Exception e)
         {

@@ -116,6 +116,7 @@ public class ChatServerWithClientValidation
                 catch
                 {
                     // client no longer active!
+                    Debug.WriteLine("Client disconnected!");
                 }
             }
     }
