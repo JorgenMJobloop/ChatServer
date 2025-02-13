@@ -186,7 +186,8 @@ public class Peer : IDisposable
             return true;
         }
         Console.WriteLine($"Certification error: {sslPolicyErrors}");
-        return false;
+
+        return sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors;
     }
     /// <summary>
     /// Implementation of the IDisposable interface
