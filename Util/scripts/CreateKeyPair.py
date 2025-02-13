@@ -14,8 +14,6 @@ def create_new_pem():
     else:
         print("Not generating new key pairs..")    
 
-def check_if_p2p_server_client_is_encrypted(cert: ssl):
-    return cert.get_server_certificate()
 
 if __name__ == "__main__":
     create_new_pem()

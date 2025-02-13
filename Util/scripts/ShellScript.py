@@ -8,26 +8,18 @@ import subprocess
 import time
 import pathlib
 
-def get_standard_output():
-    with open("../../Internal/expected_output.txt", "r") as f:
-        print(f.read()) # verify that this is the correct output, and pass it to the run function
-
 
 def run():
-    get_stdout = get_standard_output()
-    expected_output = subprocess.Popen(["dotnet", "--version"]) # expected output from stdout
-    if(expected_output != get_stdout):
-       print("Installing depencies..")
-       subprocess.Popen(["chmod+=x", "dotnet.sh"])
-       subprocess.Popen(["./dotnet.sh", ">> success.txt"]) # must run as root
-    else:
+    
+    print("Start the server? y/N? ")
+    user_input = str(input())
+    if user_input.lower() == "y":
         print("Server starting...")
         time.sleep(10)
-        print("Running command: 'dotnet watch --quiet run'")
-        subprocess.Popen("dotnet watch --quiet run")
-    
-    time.sleep(10)
-    print("Finished checking depencies, running application..")
+        print("Running commands: 'dotnet build'\n 'dotnet run'")
+        subprocess.Popen("dotnet build")
+        time.sleep(10)
+        subprocess.Popen("dotnet run")
 
 def main():
     pass
