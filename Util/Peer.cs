@@ -143,13 +143,11 @@ public class Peer : IDisposable
     public void ConnectToPeer(string address, int port, string clientCertificatePath)
     {
         using var client = new TcpClient(address, port);
-        using var sslStream = new SslStream(client.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate));
-        if (sslStream == null)
-        {
-            Debug.WriteLine("An error occured!\n Program exited with code 1...");
-        }
+
         try
         {
+            using var sslStream = new SslStream(client.GetStream(), false, ValidateServerCertificate);
+
             X509Certificate2 clientCertificate = new X509Certificate2(clientCertificatePath);
             sslStream.AuthenticateAsClient(address, new X509CertificateCollection { clientCertificate }, System.Security.Authentication.SslProtocols.Tls12, false);
             using var writer = new StreamWriter(sslStream) { AutoFlush = true };
@@ -162,6 +160,10 @@ public class Peer : IDisposable
             if (response != null)
             {
                 Console.WriteLine($"Message recieved: {response}");
+            }
+            if (response == null)
+            {
+                Debug.WriteLine("An error occured!");
             }
         }
         catch (Exception e)
@@ -177,7 +179,7 @@ public class Peer : IDisposable
     /// <param name="chain"></param>
     /// <param name="sslPolicyErrors"></param>
     /// <returns></returns>
-    private static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+    private static bool ValidateServerCertificate(object? sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
     {
         if (sslPolicyErrors == SslPolicyErrors.None)
         {
