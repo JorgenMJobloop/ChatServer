@@ -20,11 +20,9 @@ public class Peer : IDisposable
     /// <summary>
     /// P2P class constructor
     /// </summary>
-    /// <param name="certificatePath">path of certificate</param>
-    /// <param name="certificatePassword">password to decrypt</param>
-    public Peer(string certificatePath, string certificatePassword)
+    public Peer()
     {
-        serverCert = new X509Certificate2(certificatePath, certificatePassword);
+        serverCert = GenerateOrLoadedCertificate();
     }
     /// <summary>
     /// Start a new listener
@@ -201,5 +199,47 @@ public class Peer : IDisposable
             peer.Close();
         }
         StopListening();
+    }
+    /// <summary>
+    /// Generate a new X509 Certificate2 on each peer.
+    /// </summary>
+    /// <returns>new X509Certificate2</returns>
+    /// <exception cref="NotImplementedException">Generated TODO</exception>
+    private X509Certificate2 GenerateOrLoadedCertificate()
+    {
+
+        const string certPath = "peer_certificate.pfx";
+        const string password = "p2psecure";
+        // Look for existing certificates on each peer
+        if (File.Exists(certPath))
+        {
+            Console.WriteLine("Loading the server certificate..");
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            Console.WriteLine($"Elapsed time.. {stopwatch.Elapsed}");
+            stopwatch.Stop();
+
+            return new X509Certificate2(certPath, password);
+        }
+
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest(
+            "CN=Certificate", rsa,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1
+        );
+
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
+        request.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(request.PublicKey, false));
+
+        var certificate = request.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(5));
+
+        byte[] certData = certificate.Export(X509ContentType.Pfx, password);
+        File.WriteAllBytes(certPath, certData);
+
+        return new X509Certificate2(certData, password);
+
+        // TODO: Implement this method[x]
+        //throw new NotImplementedException();
     }
 }

@@ -48,11 +48,11 @@ class Program
         chatServerWithClientValidation.StartServer(8888); // run the server
     }
     /// <summary>
-    /// Run the CreateKeyPair.py script to create a new keypair.pem file, password is empty by default..
+    /// Run the CreateKeyPair.py script to create a new keypair.pem file.
     /// </summary>
     static void RunP2P()
     {
-        using (Peer peer = new Peer("keypair.pem", ""))
+        using (Peer peer = new Peer())
         {
             peer.StartListening(30303); // start a new P2P connection
             peer.ConnectToPeer("127.0.0.1", 30303, "Hello P2P!"); // connect to peer(s)
