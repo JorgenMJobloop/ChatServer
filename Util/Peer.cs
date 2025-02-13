@@ -141,13 +141,11 @@ public class Peer : IDisposable
     public void ConnectToPeer(string address, int port, string clientCertificatePath)
     {
         using var client = new TcpClient(address, port);
+        using var sslStream = new SslStream(client.GetStream(), false, ValidateServerCertificate);
 
         try
         {
-            using var sslStream = new SslStream(client.GetStream(), false, ValidateServerCertificate);
-
-            X509Certificate2 clientCertificate = new X509Certificate2(clientCertificatePath);
-            sslStream.AuthenticateAsClient(address, new X509CertificateCollection { clientCertificate }, System.Security.Authentication.SslProtocols.Tls12, false);
+            sslStream.AuthenticateAsClient(address, null, System.Security.Authentication.SslProtocols.Tls12, false);
             using var writer = new StreamWriter(sslStream) { AutoFlush = true };
             using var reader = new StreamReader(sslStream);
 
@@ -155,13 +153,9 @@ public class Peer : IDisposable
             Console.WriteLine($"Encrypted message sent: {sslStream}\nfrom: {address}\non port: {port}");
 
             string? response = reader.ReadLine();
-            if (response != null)
+            if (!string.IsNullOrWhiteSpace(response))
             {
                 Console.WriteLine($"Message recieved: {response}");
-            }
-            if (response == null)
-            {
-                Debug.WriteLine("An error occured!");
             }
         }
         catch (Exception e)
@@ -214,11 +208,6 @@ public class Peer : IDisposable
         if (File.Exists(certPath))
         {
             Console.WriteLine("Loading the server certificate..");
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-            Console.WriteLine($"Elapsed time.. {stopwatch.Elapsed}");
-            stopwatch.Stop();
-
             return new X509Certificate2(certPath, password);
         }
 
@@ -239,7 +228,7 @@ public class Peer : IDisposable
 
         return new X509Certificate2(certData, password);
 
-        // TODO: Implement this method[x]
+        // TODO: Implement this method[x]: 52c2555->151615e
         //throw new NotImplementedException();
     }
 }
