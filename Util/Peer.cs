@@ -204,6 +204,11 @@ public class Peer : IDisposable
 
         const string certPath = "peer_certificate.pfx";
         const string password = "p2psecure";
+        Console.WriteLine("Enter a new password:");
+        string? pass = Console.ReadLine();
+        HashTokens hashTokens = new HashTokens();
+        var output = hashTokens.GenerateSaltedHash(pass, "my salt string!");
+        Console.WriteLine($"New password:{output}");
         // Look for existing certificates on each peer
         if (File.Exists(certPath))
         {
