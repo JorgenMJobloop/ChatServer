@@ -12,6 +12,8 @@ using System.Text.Json;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
+
+
 /// <summary>
 /// An async TCP Chatserver CLI (MVP)
 /// </summary>
@@ -23,26 +25,26 @@ public class ChatServerAsync
     /// A list of connected clients
     /// </summary>
     private readonly List<TcpClient> clients = new List<TcpClient>();
-    private TcpClient? newClient { get; set; }
     /// <summary>
     /// Store a hashed password in-memory when server is running
     /// </summary>
     private string? Password { get; set; }
     //public List<Thread?> ClientThreads { get; set; } = [];
-
-
+    
     /// <summary>
     /// Our main listening method
     /// </summary>
     /// <param name="port">the port our server will listen on</param>
     public async Task StartServerAsync(int port)
     {
-        bool isRunning = true;
+        var isRunning = true;
         tcpListener = new TcpListener(IPAddress.Any, port);
         // start up the connection
         tcpListener.Start();
         Console.WriteLine($"Server started on port {port}...");
-
+        int numberOfClients = clients.Count;
+        int allowedNumberOfClients = 10;
+        // handle a maximum of 10 clients
         while (isRunning)
         {
             // client listener
@@ -51,7 +53,13 @@ public class ChatServerAsync
             lock (clients) clients.Add(client);
             _ = Task.Run(() => HandleClientAsync(client));
             Console.WriteLine("A new client has connected to the server!");
-            if (client.Connected == false)
+            Console.WriteLine($"Client connected state: {client.Connected}");
+            var clientState = client.Client.RemoteEndPoint;
+            numberOfClients++;
+            Console.WriteLine($"Number of clients connected: {numberOfClients}");
+            Console.WriteLine($"Client IPv4 address: {clientState}");
+            
+            if (numberOfClients >= allowedNumberOfClients)
             {
                 isRunning = false;
                 break;
@@ -61,9 +69,9 @@ public class ChatServerAsync
 
     private async Task HandleClientAsync(TcpClient client)
     {
-        using var stream = client.GetStream();
+        await using var stream = client.GetStream();
         using var streamReader = new StreamReader(stream);
-        using var streamWriter = new StreamWriter(stream) { AutoFlush = true };
+        await using var streamWriter = new StreamWriter(stream) { AutoFlush = true };
 
         try
         {
@@ -74,7 +82,7 @@ public class ChatServerAsync
                 {
                     break;
                 }
-                Console.WriteLine($"");
+                Console.WriteLine($"{message}");
             }
         }
         catch (Exception e)
@@ -108,6 +116,7 @@ public class ChatServerAsync
                 catch
                 {
                     // client no longer active!
+                    Debug.WriteLine("An error occured writing to the stream!");
                 }
             }
     }

@@ -80,7 +80,7 @@ public class Peer : IDisposable
             try
             {
                 using var reader = new StreamReader(sslStream);
-                using var writer = new StreamWriter(sslStream) { AutoFlush = true };
+                await using var writer = new StreamWriter(sslStream) { AutoFlush = true };
                 while (isRunning)
                 {
                     string? message = await reader.ReadLineAsync();
@@ -138,7 +138,7 @@ public class Peer : IDisposable
     /// <param name="address">Server address</param>
     /// <param name="port">Port to open</param>
     /// <param name="message">P2P Messages</param>
-    public void ConnectToPeer(string address, int port, string clientCertificatePath)
+    public void ConnectToPeer(string address, int port, string? clientCertificatePath)
     {
         using var client = new TcpClient(address, port);
         using var sslStream = new SslStream(client.GetStream(), false, ValidateServerCertificate);
@@ -201,13 +201,15 @@ public class Peer : IDisposable
     /// <exception cref="NotImplementedException">Generated TODO</exception>
     private X509Certificate2 GenerateOrLoadedCertificate()
     {
-
         const string certPath = "peer_certificate.pfx";
-        const string password = "p2psecure";
         Console.WriteLine("Enter a new password:");
-        string? pass = Console.ReadLine();
+        var password = Console.ReadLine();
         HashTokens hashTokens = new HashTokens();
-        var output = hashTokens.GenerateSaltedHash(pass, "my salt string!");
+        if (string.IsNullOrEmpty(password))
+        {
+            throw new Exception("Password field cannot be empty!");
+        }
+        var output = hashTokens.GenerateSaltedHash(password, "my_salt_string!");
         Console.WriteLine($"New password:{output}");
         // Look for existing certificates on each peer
         if (File.Exists(certPath))
@@ -232,8 +234,5 @@ public class Peer : IDisposable
         File.WriteAllBytes(certPath, certData);
 
         return new X509Certificate2(certData, password);
-
-        // TODO: Implement this method[x]: 52c2555->151615e
-        //throw new NotImplementedException();
     }
 }
